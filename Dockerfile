@@ -1,5 +1,5 @@
 FROM node:16-alpine AS build
-ENV YesPlayMusic_VERSION=v0.4.8
+ENV YesPlayMusic_VERSION=v0.4.9
 RUN apk add --no-cache python3 make g++ git
 WORKDIR /js/src/github.com/qier222/
 RUN git clone --depth=1 --recursive https://github.com/qier222/YesPlayMusic.git  -b ${VERSION}  YesPlayMusic
@@ -13,7 +13,7 @@ FROM nginx:alpine AS app
 
 RUN apk add --no-cache bash nodejs npm
 
-ENV NeteaseCloudMusicApi_VERSION=4.24.0
+ENV NeteaseCloudMusicApi_VERSION=4.25.0
 
 RUN npm install -g NeteaseCloudMusicApi@${NeteaseCloudMusicApi_VERSION}
 
