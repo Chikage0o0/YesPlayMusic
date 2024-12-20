@@ -124,7 +124,7 @@ if [ "${ENABLE_UNBLOCK}" = "true" ]; then
     export ENABLE_LOCAL_VIP="svip"
 
     # 启动 unblockneteasemusic
-    unblockneteasemusic -o pyncmd bilibili kugou kuwo -p 80:443 -f 45.127.129.53 -e - &
+    unblockneteasemusic -o pyncmd bilibili kugou kuwo ytdlp -p 80:443 -f 45.127.129.53 -e - &
 fi
 
 # 启动 NeteaseCloudMusicApi
