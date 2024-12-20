@@ -20,16 +20,12 @@ ENV UnBlockNeteaseMusic_VERSION=0.27.8-patch.1
 RUN npm install -g NeteaseCloudMusicApi@${NeteaseCloudMusicApi_VERSION} @unblockneteasemusic/server@${UnBlockNeteaseMusic_VERSION}
 RUN wget https://raw.githubusercontent.com/UnblockNeteaseMusic/server/refs/heads/enhanced/ca.crt -O /etc/ssl/certs/netease.crt && \
     update-ca-certificates
-RUN apk add --no-cache python3 youtube-dl \
-    && wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp
+RUN apk add --no-cache python3 yt-dlp
 
 
 COPY --from=build /js/src/github.com/qier222/YesPlayMusic/dist /usr/share/nginx/html
 COPY entrypoint.sh /usr/bin/entrypoint.sh
 
 RUN chmod +x /usr/bin/entrypoint.sh
-
-EXPOSE 8080
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
