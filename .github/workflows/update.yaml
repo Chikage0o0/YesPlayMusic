@@ -1,0 +1,82 @@
+name: Check Version Updates
+on:
+  schedule:
+    - cron: "0 0 * * *"  # 每天运行一次
+  workflow_dispatch:      # 支持手动触发
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整的git历史
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Fetch YesPlayMusic latest version
+        id: latest-version-YesPlayMusic
+        run: python .github/scripts/get_latest_version_github.py qier222/YesPlayMusic
+
+      - name: Fetch NeteaseCloudMusicApi latest version
+        id: latest-version-NeteaseCloudMusicApi
+        run: python .github/scripts/get_latest_version_npm.py NeteaseCloudMusicApi
+
+      - name: Update Dockerfile
+        if: steps.latest-version-YesPlayMusic.outputs.version && steps.latest-version-NeteaseCloudMusicApi.outputs.version
+        run: |
+          YesPlayMusic_version="${{ steps.latest-version-YesPlayMusic.outputs.version }}"
+          NeteaseCloudMusicApi_version="${{ steps.latest-version-NeteaseCloudMusicApi.outputs.version }}"
+          sed -i "s/ENV YesPlayMusic_VERSION=.*/ENV YesPlayMusic_VERSION=$YesPlayMusic_version/" Dockerfile
+          sed -i "s/ENV NeteaseCloudMusicApi_VERSION=.*/ENV NeteaseCloudMusicApi_VERSION=$NeteaseCloudMusicApi_version/" Dockerfile
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --exit-code Dockerfile; then
+            echo "No changes in Dockerfile."
+            echo "skip_commit=true" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in Dockerfile."
+            echo "skip_commit=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete existing tag
+        if: steps.latest-version-YesPlayMusic.outputs.version && steps.check-changes.outputs.skip_commit == 'false'
+        run: |
+          if git tag -l "${{ steps.latest-version-YesPlayMusic.outputs.version }}" | grep -q .; then
+            git tag -d ${{ steps.latest-version-YesPlayMusic.outputs.version }}
+            git push origin :refs/tags/${{ steps.latest-version-YesPlayMusic.outputs.version }}
+          fi
+
+      - name: Commit and push changes
+        if: steps.latest-version-YesPlayMusic.outputs.version && steps.check-changes.outputs.skip_commit == 'false'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Dockerfile
+          git commit -m "Update Dockerfile VERSION to ${{ steps.latest-version-YesPlayMusic.outputs.version }}"
+          git push
+          git tag ${{ steps.latest-version-YesPlayMusic.outputs.version }}
+          git push origin ${{ steps.latest-version-YesPlayMusic.outputs.version }}
+
+      - name: Trigger build workflow
+        if: steps.latest-version-YesPlayMusic.outputs.version && steps.check-changes.outputs.skip_commit == 'false'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: version-updated
+          client-payload: '{"tag": "${{ steps.latest-version-YesPlayMusic.outputs.version }}"}'
